@@ -1,3 +1,13 @@
+/**
+ * ZAYA Delivery & Moroccan Logistics Provider
+ *
+ * Models package creation, waybill generation, tracking ID allocation,
+ * and delivery timeline estimation with domestic Moroccan logistics networks
+ * (Cathedis, Express Maroc, Amana).
+ *
+ * @module lib/providers/DeliveryProvider
+ */
+
 export interface ShipmentRequest {
   orderId: string;
   orderNumber: string;
@@ -5,7 +15,7 @@ export interface ShipmentRequest {
   recipientPhone: string;
   address: string;
   city: string;
-  amountToCollectMAD: number; // For Cash On Delivery
+  amountToCollectMAD: number; // Required for Cash On Delivery reconciliation
   packageDescription: string;
 }
 
@@ -17,12 +27,20 @@ export interface ShipmentResult {
   trackingUrl: string;
 }
 
+/**
+ * Interface defining logistics courier interactions.
+ */
 export interface IDeliveryProvider {
   name: string;
   createShipment(request: ShipmentRequest): Promise<ShipmentResult>;
   getTrackingStatus(trackingNumber: string): Promise<string>;
 }
 
+/**
+ * Implementation for Moroccan national parcel delivery networks.
+ * Delivers in 24 hours within major urban centers (Casablanca, Rabat, Mohammedia)
+ * and 48 hours for other Moroccan regions.
+ */
 export class MoroccanCourierProvider implements IDeliveryProvider {
   name = "Cathedis / Express Maroc";
 
@@ -30,7 +48,7 @@ export class MoroccanCourierProvider implements IDeliveryProvider {
     const randomCode = Math.floor(10000 + Math.random() * 90000);
     const trackingNumber = `ZAYA-MA-${randomCode}`;
     
-    // Delivery time: 24h for Casablanca/Rabat, 48h for others
+    // Delivery SLA: 24h for Casablanca/Rabat, 48h for regional cities
     const isMajorHub = ["Casablanca", "Rabat", "Mohammedia"].includes(request.city);
     const daysToAdd = isMajorHub ? 1 : 2;
     const estDate = new Date();
@@ -50,4 +68,7 @@ export class MoroccanCourierProvider implements IDeliveryProvider {
   }
 }
 
+/**
+ * Default shared logistics provider instance.
+ */
 export const defaultDeliveryProvider = new MoroccanCourierProvider();

@@ -1,3 +1,15 @@
+/**
+ * ZAYA Unified Data Service Layer
+ *
+ * Implements a resilient hybrid data access pattern:
+ * 1. Primary: Queries the Prisma 7 client connected to SQLite / PostgreSQL.
+ * 2. Fallback: If the database throws, is not yet seeded, or returns an empty dataset
+ *    (common on cold serverless instances), it seamlessly serves curated in-memory
+ *    Moroccan seed data to prevent downtime or 404 errors.
+ *
+ * @module lib/data-service
+ */
+
 import { prisma } from "./db";
 import { sanitizePetForPublicScan, PublicPetProfile } from "./security";
 import {
@@ -9,6 +21,14 @@ import {
   FALLBACK_VET_ANFA,
 } from "./fallback-data";
 
+/**
+ * Looks up a pet by its public NFC/QR secure token.
+ * Automatically increments telemetry scan counters and generates audit logs.
+ *
+ * @param token - Opaque public tag token (e.g. 'luna_sec_7891')
+ * @param locale - Target language for WhatsApp and approximate age ('fr' | 'ar' | 'en')
+ * @returns Sanitized PublicPetProfile or null if token does not exist
+ */
 export async function getPetByTagToken(token: string, locale: "fr" | "ar" | "en" = "fr"): Promise<PublicPetProfile | null> {
   try {
     const tag = await prisma.petTag.findUnique({
@@ -61,6 +81,13 @@ export async function getPetByTagToken(token: string, locale: "fr" | "ar" | "en"
   return null;
 }
 
+/**
+ * Retrieves all pets owned by a specific user with full relations
+ * (reminders, medical history, weight logs, and subscriptions).
+ *
+ * @param ownerId - User identifier of pet owner
+ * @returns Array of Pet records
+ */
 export async function getPetsByOwner(ownerId: string) {
   try {
     const pets = await prisma.pet.findMany({
@@ -95,6 +122,12 @@ export async function getPetsByOwner(ownerId: string) {
   return FALLBACK_PETS.filter((p) => p.ownerId === ownerId || ownerId === "usr_amine_owner");
 }
 
+/**
+ * Retrieves complete detailed pet dossier including medical records and documents.
+ *
+ * @param petId - Pet primary key
+ * @returns Pet record with all associated records
+ */
 export async function getPetDetails(petId: string) {
   try {
     const pet = await prisma.pet.findUnique({
@@ -131,6 +164,14 @@ export async function getPetDetails(petId: string) {
   return FALLBACK_PETS.find((p) => p.id === petId) || FALLBACK_PETS[0];
 }
 
+/**
+ * Activates or deactivates emergency Lost Pet Mode.
+ *
+ * @param petId - Target pet ID
+ * @param isLost - Whether the pet is declared lost
+ * @param lostNotes - Specific instructions and neighborhood details
+ * @returns Updated Pet record
+ */
 export async function toggleLostMode(petId: string, isLost: boolean, lostNotes?: string) {
   try {
     const updated = await prisma.pet.update({
@@ -170,6 +211,13 @@ export async function toggleLostMode(petId: string, isLost: boolean, lostNotes?:
   }
 }
 
+/**
+ * Retrieves the product catalog with optional filtering by category and species.
+ *
+ * @param categoryId - Optional category ID filter
+ * @param targetSpecies - Optional species filter ('DOG' | 'CAT' | 'ALL')
+ * @returns Array of Product objects with categories and merchant information
+ */
 export async function getProducts(categoryId?: string, targetSpecies?: string) {
   try {
     const where: any = {};
@@ -208,6 +256,12 @@ export async function getProducts(categoryId?: string, targetSpecies?: string) {
   });
 }
 
+/**
+ * Retrieves a single product by its URL-friendly slug.
+ *
+ * @param slug - Product slug (e.g. 'medaille-zaya-nfc-inox')
+ * @returns Product object or null if not found
+ */
 export async function getProductBySlug(slug: string) {
   try {
     const prod = await prisma.product.findUnique({
@@ -229,6 +283,11 @@ export async function getProductBySlug(slug: string) {
   return FALLBACK_PRODUCTS.find((p) => p.slug === slug) || null;
 }
 
+/**
+ * Retrieves all available product categories.
+ *
+ * @returns Array of ProductCategory objects
+ */
 export async function getCategories() {
   try {
     const cats = await prisma.productCategory.findMany({
@@ -245,6 +304,12 @@ export async function getCategories() {
   return FALLBACK_CATEGORIES;
 }
 
+/**
+ * Retrieves order history for a specific customer.
+ *
+ * @param userId - User ID
+ * @returns Array of Order objects with nested OrderItems
+ */
 export async function getOrdersByUser(userId: string) {
   try {
     const orders = await prisma.order.findMany({
@@ -267,6 +332,12 @@ export async function getOrdersByUser(userId: string) {
   return FALLBACK_ORDERS.filter((o) => o.userId === userId || userId === "usr_amine_owner");
 }
 
+/**
+ * Retrieves recurring subscriptions for automated replenishment.
+ *
+ * @param userId - User ID
+ * @returns Array of Subscription objects
+ */
 export async function getSubscriptionsByUser(userId: string) {
   try {
     const subs = await prisma.subscription.findMany({
@@ -288,6 +359,12 @@ export async function getSubscriptionsByUser(userId: string) {
   return FALLBACK_SUBSCRIPTIONS.filter((s) => s.userId === userId || userId === "usr_amine_owner");
 }
 
+/**
+ * Retrieves veterinary clinical dashboard metrics and assigned patients.
+ *
+ * @param vetUserId - Veterinary practitioner user ID
+ * @returns Aggregated clinic dashboard metrics
+ */
 export async function getVetDashboardData(vetUserId: string) {
   try {
     const vet = await prisma.vetProfile.findFirst({
@@ -341,6 +418,11 @@ export async function getVetDashboardData(vetUserId: string) {
   };
 }
 
+/**
+ * Aggregates supervisory KPIs and audit logs for the central platform administrator.
+ *
+ * @returns Platform metrics summary
+ */
 export async function getAdminMetrics() {
   try {
     const [

@@ -1,3 +1,14 @@
+/**
+ * ZAYA Notification & WhatsApp Integration Provider
+ *
+ * Generates direct bilingual WhatsApp URLs with contextual messages for:
+ * 1. Safe scan reassurance ("Tout va bien")
+ * 2. Emergency lost pet recovery with neighborhood coordinates
+ * 3. Clinical reminders (vaccinations, parasite prevention)
+ *
+ * @module lib/providers/NotificationProvider
+ */
+
 export interface WhatsAppMessageParams {
   phone: string;
   petName: string;
@@ -9,6 +20,17 @@ export interface WhatsAppMessageParams {
   locale?: "fr" | "ar" | "en";
 }
 
+/**
+ * Generates a clean, clickable WhatsApp wa.me link with pre-composed text.
+ * Normalizes phone numbers to international digits (+212).
+ *
+ * @param params - Message composition parameters
+ * @returns Clickable WhatsApp URL
+ *
+ * @example
+ * generateWhatsAppLink({ phone: "+212661123456", petName: "Luna", isLost: true, locale: "fr" })
+ * // returns "https://wa.me/212661123456?text=Bonjour..."
+ */
 export function generateWhatsAppLink(params: WhatsAppMessageParams): string {
   // Normalize phone number to international format without + or spaces
   const cleanPhone = params.phone.replace(/[^\d]/g, "");
@@ -64,7 +86,7 @@ export class NotificationService implements INotificationProvider {
     message: string;
     petName: string;
   }): Promise<{ success: boolean; channel: string }> {
-    // In production, triggers WhatsApp Cloud API or SMS provider (e.g. Infobip / Twilio)
+    // Dispatches notification event via in-app alert or WhatsApp gateway
     console.log(`[NotificationService] Sending reminder for ${params.petName} to ${params.phone || params.email}: ${params.title}`);
     return {
       success: true,

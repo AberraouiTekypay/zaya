@@ -38,6 +38,18 @@ REPEAT
 
 ---
 
+## 📚 Technical Documentation Suite
+
+Comprehensive architecture, API specifications, data models, and guides are located in the [`docs/`](file:///C:/zaya/docs) directory:
+
+- 🏛️ **[System Architecture (`docs/ARCHITECTURE.md`)](file:///C:/zaya/docs/ARCHITECTURE.md)**: Next.js App Router design, state management, RBAC, and resilient serverless fallbacks.
+- 🔌 **[REST API Reference (`docs/API.md`)](file:///C:/zaya/docs/API.md)**: Specifications for all 15 endpoints (methods, parameters, JSON payloads, responses, curl examples).
+- 🗄️ **[Data Models & Schema (`docs/DATA_MODELS.md`)](file:///C:/zaya/docs/DATA_MODELS.md)**: Full Prisma ERD, model definitions, relationships, and data classification tiers.
+- 🇲🇦 **[Moroccan Localization (`docs/LOCALIZATION.md`)](file:///C:/zaya/docs/LOCALIZATION.md)**: MAD currency formatting, +212 WhatsApp integration, Arabic RTL layout, and GCC/EU expansion.
+- 🛠️ **[Developer & DevOps Guide (`docs/DEVELOPER_GUIDE.md`)](file:///C:/zaya/docs/DEVELOPER_GUIDE.md)**: Local setup, environment variables, Vitest tests, seed execution, and Vercel deployment.
+
+---
+
 ## Core Features & Modules
 
 ### 1. Digital Pet Identity & Connected Tags

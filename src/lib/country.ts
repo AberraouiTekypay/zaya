@@ -1,3 +1,12 @@
+/**
+ * ZAYA Country & Regional Configuration Engine
+ *
+ * Provides localized constants, currency formatting, telephone normalization,
+ * and delivery pricing rules. Defaults to Morocco (MA) with Moroccan Dirhams (MAD).
+ *
+ * @module lib/country
+ */
+
 export interface CountryConfig {
   code: string;
   nameFr: string;
@@ -35,6 +44,12 @@ export interface CountryConfig {
   }[];
 }
 
+/**
+ * Standard configuration for the Kingdom of Morocco launch market.
+ * - Currency: MAD (د.م.)
+ * - Delivery: 25 MAD flat fee, free above 450 MAD.
+ * - Gateways: Cash on Delivery & Moroccan CMI 3D-Secure.
+ */
 export const MOROCCO_CONFIG: CountryConfig = {
   code: "MA",
   nameFr: "Maroc",
@@ -87,8 +102,23 @@ export const MOROCCO_CONFIG: CountryConfig = {
   ],
 };
 
+/**
+ * Current active regional deployment configuration.
+ */
 export const CURRENT_COUNTRY = MOROCCO_CONFIG;
 
+/**
+ * Formats a numeric price into a localized currency string.
+ * Uses integer formatting for whole amounts (e.g. "79 MAD") and up to 2 decimal places.
+ *
+ * @param amount - Numeric price value
+ * @param locale - Target language ('fr' | 'ar' | 'en')
+ * @returns Formatted currency string (e.g., "349 MAD" or "349 د.م.")
+ *
+ * @example
+ * formatPrice(79, 'fr') // "79 MAD"
+ * formatPrice(79, 'ar') // "79 د.م."
+ */
 export function formatPrice(amount: number, locale: "fr" | "ar" | "en" = "fr"): string {
   const formatted = amount.toLocaleString(locale === "ar" ? "ar-MA" : "fr-FR", {
     minimumFractionDigits: 0,
@@ -101,6 +131,12 @@ export function formatPrice(amount: number, locale: "fr" | "ar" | "en" = "fr"): 
   return `${formatted} ${MOROCCO_CONFIG.currency.symbolFr}`;
 }
 
+/**
+ * Normalizes a phone number to standard international dialable format.
+ *
+ * @param phone - Raw telephone input string
+ * @returns Clean dialable digits preserving '+' prefix
+ */
 export function formatPhone(phone: string): string {
   if (!phone) return "";
   const cleaned = phone.replace(/[^\d+]/g, "");
