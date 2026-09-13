@@ -1,0 +1,331 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id              String         @id @default(uuid())
+  email           String         @unique
+  passwordHash    String?
+  name            String
+  role            String         @default("OWNER") // OWNER, VET, MERCHANT, ADMIN
+  phone           String?
+  city            String?
+  address         String?
+  preferredLocale String         @default("fr") // fr, ar, en
+  avatarUrl       String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  pets            Pet[]          @relation("OwnerPets")
+  reminders       Reminder[]
+  orders          Order[]
+  subscriptions   Subscription[]
+  auditLogs       AuditLog[]
+  notifications   Notification[]
+  vetProfile      VetProfile?
+  merchantProfile MerchantProfile?
+}
+
+model VetProfile {
+  id              String       @id @default(uuid())
+  userId          String       @unique
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clinicName      String
+  licenseNumber   String?
+  phone           String
+  emergencyPhone  String?
+  city            String       @default("Casablanca")
+  address         String
+  openingHours    String?
+  bio             String?
+  verified        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  managedPets     Pet[]        @relation("VetPets")
+}
+
+model MerchantProfile {
+  id              String       @id @default(uuid())
+  userId          String       @unique
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeName       String
+  description     String?
+  city            String       @default("Casablanca")
+  address         String?
+  phone           String
+  verified        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  products        Product[]
+}
+
+model Pet {
+  id              String            @id @default(uuid())
+  name            String
+  species         String            @default("DOG") // DOG, CAT, OTHER
+  breed           String?
+  birthDate       DateTime?
+  sex             String            @default("FEMALE") // MALE, FEMALE
+  color           String?
+  microchipNumber String?           @unique
+  photoUrl        String?
+  notes           String?
+  isLost          Boolean           @default(false)
+  lostNotes       String?
+  lostSince       DateTime?
+  emergencyContact String?
+  emergencyPhone  String?
+
+  ownerId         String
+  owner           User              @relation("OwnerPets", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  vetId           String?
+  vet             VetProfile?       @relation("VetPets", fields: [vetId], references: [id])
+
+  tag             PetTag?
+  healthRecords   PetHealthRecord[]
+  documents       PetDocument[]
+  weights         PetWeight[]
+  reminders       Reminder[]
+  subscriptions   Subscription[]
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([ownerId])
+  @@index([isLost])
+}
+
+model PetTag {
+  id              String    @id @default(uuid())
+  code            String    @unique // e.g., ZAYA-TAG-001
+  token           String    @unique // Secure public token for /p/{token}
+  status          String    @default("ACTIVE") // ACTIVE, INACTIVE, REVOKED
+  qrCodeUrl       String?
+  activatedAt     DateTime?
+  scanCount       Int       @default(0)
+  lastScannedAt   DateTime?
+
+  petId           String?   @unique
+  pet             Pet?      @relation(fields: [petId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([token])
+}
+
+model PetHealthRecord {
+  id               String    @id @default(uuid())
+  petId            String
+  pet              Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  type             String    // VACCINATION, DEWORMING, FLEA_TICK, MEDICATION, SURGERY, CHECKUP, OTHER
+  title            String
+  description      String?
+  dateAdministered DateTime  @default(now())
+  nextDueDate      DateTime?
+  providerName     String?   // Clinic or vet name
+  batchNumber      String?   // For vaccines
+  documentUrl      String?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([petId])
+  @@index([type])
+}
+
+model PetDocument {
+  id        String   @id @default(uuid())
+  petId     String
+  pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  title     String
+  category  String   @default("PASSPORT") // PASSPORT, VACCINATION_CERTIFICATE, PRESCRIPTION, LAB_REPORT, OTHER
+  fileUrl   String
+  fileSize  String?
+  mimeType  String?  @default("application/pdf")
+  createdAt DateTime @default(now())
+
+  @@index([petId])
+}
+
+model PetWeight {
+  id         String   @id @default(uuid())
+  petId      String
+  pet        Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  weightKg   Float
+  recordedAt DateTime @default(now())
+  notes      String?
+
+  @@index([petId])
+}
+
+model Reminder {
+  id          String    @id @default(uuid())
+  petId       String
+  pet         Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title       String
+  type        String    // VACCINATION, FLEA_TICK, DEWORMING, MEDICATION, GROOMING, VET_APPOINTMENT, FOOD_REORDER, CUSTOM
+  dueDate     DateTime
+  recurrence  String    @default("NONE") // NONE, MONTHLY, EVERY_30_DAYS, EVERY_90_DAYS, YEARLY
+  status      String    @default("PENDING") // PENDING, COMPLETED, DISMISSED
+  notes       String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([ownerId])
+  @@index([petId])
+  @@index([status])
+}
+
+model ProductCategory {
+  id            String    @id @default(uuid())
+  slug          String    @unique
+  nameFr        String
+  nameAr        String
+  nameEn        String
+  descriptionFr String?
+  descriptionAr String?
+  icon          String?
+
+  products      Product[]
+
+  createdAt     DateTime  @default(now())
+}
+
+model Product {
+  id                   String           @id @default(uuid())
+  slug                 String           @unique
+  nameFr               String
+  nameAr               String
+  nameEn               String
+  descriptionFr        String
+  descriptionAr        String
+  descriptionEn        String
+  priceMAD             Float
+  compareAtPriceMAD    Float?
+  stock                Int              @default(50)
+  targetSpecies        String           @default("ALL") // ALL, DOG, CAT
+  imageUrl             String
+  isRecurringEligible  Boolean          @default(true)
+  defaultIntervalDays  Int?             @default(30)
+  badge                String?          // e.g. "Bestseller", "Vétérinaire", "Nouveau"
+  rating               Float            @default(4.9)
+  reviewsCount         Int              @default(38)
+
+  categoryId           String
+  category             ProductCategory  @relation(fields: [categoryId], references: [id])
+
+  merchantId           String?
+  merchant             MerchantProfile? @relation(fields: [merchantId], references: [id])
+
+  orderItems           OrderItem[]
+  subscriptions        Subscription[]
+
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@index([categoryId])
+  @@index([targetSpecies])
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  orderNumber     String      @unique // e.g., ZAYA-ORD-10482
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  totalMAD        Float
+  subtotalMAD     Float
+  deliveryFeeMAD  Float       @default(25.0)
+  paymentMethod   String      @default("CASH_ON_DELIVERY") // CASH_ON_DELIVERY, CMI_CARD, STRIPE
+  paymentStatus   String      @default("PENDING") // PENDING, PAID, FAILED
+  deliveryStatus  String      @default("PREPARING") // PENDING, PREPARING, DISPATCHED, DELIVERED, CANCELLED
+  trackingNumber  String?
+  deliveryAddress String
+  city            String      @default("Casablanca")
+  phone           String
+  notes           String?
+
+  items           OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([orderNumber])
+}
+
+model OrderItem {
+  id           String   @id @default(uuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  quantity     Int      @default(1)
+  unitPriceMAD Float
+  totalPriceMAD Float
+
+  @@index([orderId])
+}
+
+model Subscription {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  petId            String
+  pet              Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product  @relation(fields: [productId], references: [id])
+  quantity         Int      @default(1)
+  unitPriceMAD     Float
+  intervalDays     Int      @default(30)
+  nextDeliveryDate DateTime
+  status           String   @default("ACTIVE") // ACTIVE, PAUSED, CANCELLED
+  deliveryAddress  String
+  city             String   @default("Casablanca")
+  phone            String
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
+  @@index([petId])
+  @@index([status])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("INFO") // INFO, REMINDER, LOST_PET, ORDER, VET
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  details   String?  // JSON string
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([entity])
+}
